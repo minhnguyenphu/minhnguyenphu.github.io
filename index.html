@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Chẩn Đoán Lồng Ngực — 14 Bệnh Lý Qua X-Quang</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #050a0f;
+    --bg2:       #080f17;
+    --panel:     #0b141f;
+    --border:    rgba(0,200,210,0.12);
+    --cyan:      #00c8d2;
+    --cyan2:     #00f0ff;
+    --teal:      #0a8a92;
+    --accent:    #00e5c0;
+    --red:       #ff4d6a;
+    --muted:     #4a6070;
+    --text:      #d0e8ec;
+    --text2:     #7fa8b5;
+    --white:     #f0fafb;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* ─── SCAN LINE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,200,210,0.018) 3px,
+      rgba(0,200,210,0.018) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── NOISE TEXTURE ─── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9998; opacity: 0.5;
+  }
+
+  /* ─── NAVBAR ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 5vw;
+    height: 64px;
+    background: rgba(5,10,15,0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    color: var(--text2);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 5vw 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* animated radial glow */
+  .hero-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px; height: 700px;
+    background: radial-gradient(ellipse, rgba(0,200,210,0.07) 0%, transparent 70%);
+    animation: pulse-glow 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulse-glow {
+    0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.7; }
+    50%      { transform: translate(-50%,-50%) scale(1.15); opacity: 1; }
+  }
+
+  /* lungs SVG background */
+  .hero-xray-bg {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 520px; height: 520px;
+    opacity: 0.035;
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    border: 1px solid rgba(0,200,210,0.3);
+    padding: 6px 18px;
+    border-radius: 100px;
+    margin-bottom: 2rem;
+    animation: fade-up 0.8s ease both;
+    position: relative;
+    display: inline-block;
+  }
+  .hero-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  h1 {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.8rem, 7vw, 5.8rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    color: var(--white);
+    max-width: 900px;
+    animation: fade-up 0.9s 0.1s ease both;
+    position: relative;
+  }
+  h1 span.cyan { color: var(--cyan); }
+  h1 span.outline {
+    -webkit-text-stroke: 1px rgba(0,200,210,0.4);
+    color: transparent;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--text2);
+    max-width: 600px;
+    line-height: 1.7;
+    margin: 1.5rem 0 2.5rem;
+    animation: fade-up 1s 0.2s ease both;
+    position: relative;
+  }
+
+  .hero-cta-row {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    justify-content: center;
+    animation: fade-up 1s 0.3s ease both;
+    position: relative;
+  }
+
+  /* MAIN DEMO BUTTON */
+  .btn-demo {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--cyan);
+    color: #020d10;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    padding: 16px 36px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: none; cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 30px rgba(0,200,210,0.35), 0 0 60px rgba(0,200,210,0.12);
+  }
+  .btn-demo::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+  .btn-demo:hover::before { transform: translateX(100%); }
+  .btn-demo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(0,200,210,0.55), 0 0 90px rgba(0,200,210,0.18);
+  }
+  .btn-demo svg { flex-shrink: 0; }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 0.9rem;
+    padding: 15px 28px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* stats strip */
+  .hero-stats {
+    display: flex; gap: 3rem; flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4.5rem;
+    animation: fade-up 1s 0.5s ease both;
+    position: relative;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1;
+  }
+  .stat-num .unit { font-size: 1rem; color: var(--cyan); margin-left: 2px; }
+  .stat-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .stat-divider { width: 1px; background: var(--border); align-self: stretch; }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── SECTION SHARED ─── */
+  section { padding: 100px 5vw; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1; max-width: 60px;
+    height: 1px; background: var(--teal);
+  }
+  .section-title {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    color: var(--white);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+  .section-body {
+    font-size: 0.95rem;
+    color: var(--text2);
+    line-height: 1.75;
+    max-width: 580px;
+  }
+
+  /* ─── ABOUT / OVERVIEW ─── */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  @media (max-width: 768px) {
+    .about-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    nav .nav-links { display: none; }
+    .hero-stats { gap: 2rem; }
+    .stat-divider { display: none; }
+  }
+
+  .xray-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .xray-card::before {
+    content: 'DIAGNOSTIC OUTPUT';
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--teal);
+    position: absolute; top: 14px; left: 14px;
+  }
+  .xray-card::after {
+    content: 'LIVE';
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--red);
+    position: absolute; top: 14px; right: 14px;
+    animation: blink 1.5s infinite;
+  }
+  .xray-visual {
+    aspect-ratio: 1;
+    background: #030810;
+    border-radius: 8px;
+    margin-top: 2rem;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .xray-visual svg { opacity: 0.55; }
+
+  /* scan line animation on card */
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: scan 3s linear infinite;
+    opacity: 0.7;
+  }
+  @keyframes scan {
+    0%   { top: 0%; }
+    100% { top: 100%; }
+  }
+
+  /* disease bars */
+  .disease-list { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 8px; }
+  .disease-row {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text2);
+  }
+  .disease-bar-wrap {
+    flex: 1; height: 4px;
+    background: rgba(0,200,210,0.08);
+    border-radius: 2px; overflow: hidden;
+  }
+  .disease-bar {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--teal), var(--cyan));
+    transform-origin: left;
+    animation: bar-in 1.2s ease both;
+  }
+  @keyframes bar-in {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  .disease-auc {
+    font-size: 0.65rem; color: var(--cyan);
+    min-width: 36px; text-align: right;
+  }
+
+  /* ─── METHODS ─── */
+  .methods-section { background: var(--bg2); }
+  .methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 3rem auto 0;
+  }
+  .method-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.8rem;
+    position: relative;
+    transition: border-color 0.25s, transform 0.25s;
+  }
+  .method-card:hover {
+    border-color: rgba(0,200,210,0.3);
+    transform: translateY(-4px);
+  }
+  .method-card-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--teal);
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+  }
+  .method-card h3 {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--white);
+    margin-bottom: 0.6rem;
+  }
+  .method-card p {
+    font-size: 0.85rem;
+    color: var(--text2);
+    line-height: 1.65;
+  }
+  .method-tag {
+    display: inline-block;
+    margin-top: 1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--cyan);
+    border: 1px solid rgba(0,200,210,0.2);
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  /* ─── RESULTS ─── */
+  .results-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .results-header-row {
+    display: flex; align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap; gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  .compare-strip {
+    display: flex; flex-direction: column; gap: 10px;
+    min-width: 300px;
+  }
+  .compare-row {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+  }
+  .compare-label { width: 140px; color: var(--text2); white-space: nowrap; }
+  .compare-track {
+    flex: 1; height: 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 4px; overflow: hidden;
+  }
+  .compare-fill {
+    height: 100%; border-radius: 4px;
+    animation: bar-in 1.5s ease both;
+  }
+  .fill-wang   { background: rgba(100,180,200,0.4); }
+  .fill-cnn    { background: linear-gradient(90deg, var(--teal), var(--cyan)); }
+  .fill-chex   { background: linear-gradient(90deg, var(--accent), #00e5c0cc); }
+  .compare-val { font-size: 0.68rem; color: var(--cyan); min-width: 36px; }
+
+  .diseases-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead tr { background: rgba(0,200,210,0.05); }
+  th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(0,200,210,0.05);
+    color: var(--text2);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,200,210,0.025); color: var(--text); }
+  td.auc-cell { font-family: 'Space Mono', monospace; font-size: 0.78rem; }
+  td.auc-high { color: var(--cyan); font-weight: 700; }
+  td.auc-mid  { color: var(--text); }
+  td.label-cell { color: var(--white); font-weight: 400; }
+  .badge-plus {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: #020d10;
+    background: var(--cyan);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+  }
+  .badge-minus {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text2);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+  }
+  .badge-best {
+    font-size: 0.6rem;
+    background: rgba(0,229,192,0.15);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 4px;
+    font-family: 'Space Mono', monospace;
+  }
+  tr.row-mean td {
+    background: rgba(0,200,210,0.04);
+    color: var(--white);
+    font-weight: 500;
+    border-top: 1px solid rgba(0,200,210,0.15);
+  }
+
+  /* ─── ARCHITECTURE ─── */
+  .arch-section { background: var(--bg2); }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 4rem; align-items: start;
+    max-width: 1200px; margin: 3rem auto 0;
+  }
+  @media (max-width: 900px) {
+    .arch-grid { grid-template-columns: 1fr; }
+  }
+  .arch-diagram {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+    line-height: 2.1;
+  }
+  .arch-diagram .block {
+    padding: 8px 14px;
+    border-radius: 5px;
+    border-left: 2px solid var(--teal);
+    margin: 6px 0;
+    background: rgba(0,200,210,0.03);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .arch-diagram .block:hover {
+    border-color: var(--cyan);
+    background: rgba(0,200,210,0.07);
+  }
+  .arch-diagram .block .bname { color: var(--cyan); }
+  .arch-diagram .block .bfilter { color: var(--accent); }
+  .arch-diagram .connector {
+    text-align: center; color: var(--teal); font-size: 0.8rem;
+    padding: 2px 0;
+  }
+  .arch-diagram .head-block {
+    border-left-color: var(--accent);
+    background: rgba(0,229,192,0.04);
+  }
+
+  .stages-timeline { display: flex; flex-direction: column; gap: 1px; }
+  .stage-item {
+    display: flex; align-items: stretch; gap: 0;
+    position: relative;
+  }
+  .stage-line {
+    display: flex; flex-direction: column; align-items: center;
+    width: 40px; flex-shrink: 0;
+  }
+  .stage-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 2px solid var(--teal);
+    flex-shrink: 0; margin-top: 22px;
+    transition: border-color 0.2s;
+  }
+  .stage-item:hover .stage-dot { border-color: var(--cyan); }
+  .stage-track {
+    flex: 1; width: 1px;
+    background: linear-gradient(to bottom, var(--teal), transparent);
+    margin-top: 4px;
+  }
+  .stage-content {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.4rem;
+    margin: 8px 0;
+    transition: border-color 0.2s;
+  }
+  .stage-item:hover .stage-content { border-color: rgba(0,200,210,0.25); }
+  .stage-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    color: var(--teal);
+    text-transform: uppercase;
+  }
+  .stage-content h4 {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--white);
+    margin: 4px 0 6px;
+  }
+  .stage-content p {
+    font-size: 0.82rem; color: var(--text2); line-height: 1.6;
+  }
+  .stage-pill {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--cyan);
+    border: 1px solid rgba(0,200,210,0.2);
+    padding: 2px 8px; border-radius: 3px;
+  }
+
+  /* ─── DEMO CTA SECTION ─── */
+  .cta-section {
+    text-align: center;
+    padding: 120px 5vw;
+    position: relative; overflow: hidden;
+  }
+  .cta-glow {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px; height: 400px;
+    background: radial-gradient(ellipse, rgba(0,200,210,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-section h2 {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 4rem);
+    color: var(--white);
+    line-height: 1.1;
+    max-width: 700px;
+    margin: 0 auto 1rem;
+    position: relative;
+  }
+  .cta-section p {
+    font-size: 1rem; color: var(--text2);
+    max-width: 520px; margin: 0 auto 2.5rem;
+    line-height: 1.7; position: relative;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 5vw;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-left {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .footer-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fbadge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,200,210,0.12);
+    color: var(--muted);
+  }
+
+  /* ─── SCROLL REVEAL ─── */
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1; transform: translateY(0);
+  }
+
+  /* ─── CUSTOM SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--teal); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">// CHEST-AI · v1.0</div>
+  <ul class="nav-links">
+    <li><a href="#about">Tổng quan</a></li>
+    <li><a href="#methods">Phương pháp</a></li>
+    <li><a href="#results">Kết quả</a></li>
+    <li><a href="#arch">Kiến trúc</a></li>
+    <li><a href="https://huggingface.co/spaces/chuandoanlongngucCNN/AIchuandoanlongngucCNN" target="_blank" style="color:var(--cyan)">Demo ↗</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <!-- X-ray lung outline SVG -->
+  <svg class="hero-xray-bg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M200 60 C160 60 110 90 100 140 C90 190 88 240 90 280 C92 300 110 320 130 325 C150 330 165 310 170 290 C175 270 178 240 180 210 C182 190 185 175 200 175 C215 175 218 190 220 210 C222 240 225 270 230 290 C235 310 250 330 270 325 C290 320 308 300 310 280 C312 240 310 190 300 140 C290 90 240 60 200 60Z" stroke="#00c8d2" stroke-width="1.5" fill="none"/>
+    <ellipse cx="145" cy="200" rx="35" ry="55" stroke="#00c8d2" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+    <ellipse cx="255" cy="200" rx="35" ry="55" stroke="#00c8d2" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+    <path d="M185 100 C185 130 190 140 200 140 C210 140 215 130 215 100" stroke="#00c8d2" stroke-width="1" fill="none" opacity="0.4"/>
+    <line x1="200" y1="60" x2="200" y2="350" stroke="#00c8d2" stroke-width="0.5" stroke-dasharray="6 8" opacity="0.25"/>
+    <circle cx="200" cy="180" r="20" stroke="#00c8d2" stroke-width="1" fill="none" opacity="0.35"/>
+  </svg>
+
+  <div class="hero-badge">Deep Learning · Medical Imaging · NIH ChestX-ray14</div>
+
+  <h1>
+    AI Chẩn Đoán<br/>
+    <span class="cyan">14 Bệnh Lý</span><br/>
+    <span class="outline">Lồng Ngực</span>
+  </h1>
+
+  <p class="hero-sub">
+    Mô hình <strong style="color:var(--text)">Custom CNN From Scratch</strong> — Progressive Training 4 giai đoạn,
+    Focal Loss, Dual GPU — đạt <strong style="color:var(--cyan)">Mean AUC 0.7802</strong>
+    trên 112,120 ảnh X-quang.
+  </p>
+
+  <div class="hero-cta-row">
+    <a class="btn-demo" href="https://huggingface.co/spaces/chuandoanlongngucCNN/AIchuandoanlongngucCNN" target="_blank">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+      </svg>
+      Trải nghiệm Demo Trực tiếp
+    </a>
+    <a class="btn-secondary" href="#results">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Xem kết quả
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num">0.7802<span class="unit">AUC</span></div>
+      <div class="stat-label">Mean AUC Test Set</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">112<span class="unit">K</span></div>
+      <div class="stat-label">Ảnh X-quang NIH</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">14<span class="unit">+</span></div>
+      <div class="stat-label">Bệnh lý chẩn đoán</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Giai đoạn huấn luyện</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">2.88<span class="unit">M</span></div>
+      <div class="stat-label">Tham số mô hình</div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-grid">
+    <div class="reveal">
+      <div class="section-label">Về dự án</div>
+      <h2 class="section-title">CNN From Scratch — Không dùng pre-trained weights</h2>
+      <p class="section-body">
+        Bệnh lý lồng ngực là nhóm bệnh có tỷ lệ tử vong cao nhất toàn cầu. Dự án xây dựng
+        <strong style="color:var(--text)">Custom CNN 4-Block Double-Conv</strong> huấn luyện hoàn toàn từ đầu
+        trên bộ dữ liệu NIH Chest X-ray 14 — chứng minh rằng kiến trúc tự thiết kế
+        có thể vượt baseline học thuật (Wang et al. 2017) và thu hẹp khoảng cách với CheXNet SOTA.
+      </p>
+      <p class="section-body" style="margin-top:1rem;">
+        Câu hỏi cốt lõi: <em style="color:var(--cyan)">"Một CNN tự thiết kế, from scratch,
+        có thể đạt đến đâu?"</em> — Câu trả lời: Mean AUC <strong style="color:var(--white)">0.7802</strong>,
+        vượt Wang et al. trên <strong style="color:var(--white)">11/14</strong> bệnh lý.
+      </p>
+    </div>
+
+    <div class="reveal">
+      <div class="xray-card">
+        <div class="xray-visual">
+          <svg width="200" height="200" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="400" height="400" fill="#030810"/>
+            <path d="M200 60 C160 60 110 90 100 140 C90 190 88 240 90 280 C92 300 110 320 130 325 C150 330 165 310 170 290 C175 270 178 240 180 210 C182 190 185 175 200 175 C215 175 218 190 220 210 C222 240 225 270 230 290 C235 310 250 330 270 325 C290 320 308 300 310 280 C312 240 310 190 300 140 C290 90 240 60 200 60Z" stroke="#00c8d2" stroke-width="2" fill="rgba(0,200,210,0.04)"/>
+            <ellipse cx="150" cy="210" rx="38" ry="58" stroke="#00c8d2" stroke-width="1.5" fill="rgba(0,200,210,0.03)" stroke-dasharray="5 3"/>
+            <ellipse cx="250" cy="210" rx="38" ry="58" stroke="#00c8d2" stroke-width="1.5" fill="rgba(0,200,210,0.03)" stroke-dasharray="5 3"/>
+            <path d="M185 100 C185 135 192 145 200 145 C208 145 215 135 215 100" stroke="#00c8d2" stroke-width="1.5" fill="none"/>
+            <circle cx="200" cy="185" r="22" stroke="#00e5c0" stroke-width="1" fill="rgba(0,229,192,0.05)"/>
+            <circle cx="200" cy="185" r="8" fill="rgba(0,229,192,0.12)" stroke="#00e5c0" stroke-width="1"/>
+            <line x1="80" y1="200" x2="320" y2="200" stroke="#00c8d2" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.3"/>
+            <line x1="200" y1="50" x2="200" y2="370" stroke="#00c8d2" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.3"/>
+          </svg>
+          <div class="scan-line"></div>
+        </div>
+        <div class="disease-list">
+          <div class="disease-row">
+            <span style="min-width:120px">Emphysema</span>
+            <div class="disease-bar-wrap"><div class="disease-bar" style="width:87.6%; animation-delay:0.1s"></div></div>
+            <span class="disease-auc">0.876</span>
+          </div>
+          <div class="disease-row">
+            <span style="min-width:120px">Edema</span>
+            <div class="disease-bar-wrap"><div class="disease-bar" style="width:87%; animation-delay:0.2s"></div></div>
+            <span class="disease-auc">0.870</span>
+          </div>
+          <div class="disease-row">
+            <span style="min-width:120px">Effusion</span>
+            <div class="disease-bar-wrap"><div class="disease-bar" style="width:85.2%; animation-delay:0.3s"></div></div>
+            <span class="disease-auc">0.852</span>
+          </div>
+          <div class="disease-row">
+            <span style="min-width:120px">Pneumothorax</span>
+            <div class="disease-bar-wrap"><div class="disease-bar" style="width:84.2%; animation-delay:0.4s"></div></div>
+            <span class="disease-auc">0.842</span>
+          </div>
+          <div class="disease-row" style="color:var(--accent)">
+            <span style="min-width:120px">Hernia ★</span>
+            <div class="disease-bar-wrap"><div class="disease-bar" style="width:93.4%; animation-delay:0.5s; background:linear-gradient(90deg,var(--teal),var(--accent))"></div></div>
+            <span class="disease-auc" style="color:var(--accent)">0.934</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METHODS -->
+<section id="methods" class="methods-section">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Phương pháp kỹ thuật</div>
+      <h2 class="section-title">Đóng góp kỹ thuật chính</h2>
+    </div>
+    <div class="methods-grid">
+      <div class="method-card reveal">
+        <div class="method-card-num">01 / LOSS FUNCTION</div>
+        <h3>Focal Loss</h3>
+        <p>α = 0.65, γ = 2.0, float32-safe. Giải quyết mất cân bằng nhãn nghiêm trọng — Hernia chỉ chiếm 0.2% dataset. Thay thế BCE tiêu chuẩn để tập trung vào hard examples.</p>
+        <span class="method-tag">FL(p) = −α(1−p)^γ log(p)</span>
+      </div>
+      <div class="method-card reveal">
+        <div class="method-card-num">02 / TRAINING</div>
+        <h3>Progressive Training 4 Giai đoạn</h3>
+        <p>Mở dần từng block — từ Block 1 đến Block 1–4. Tăng resolution từ 224×224 lên 384×384 ở Stage 4 sau khi model đã warm-up, đảm bảo hội tụ ổn định.</p>
+        <span class="method-tag">224px → 384px</span>
+      </div>
+      <div class="method-card reveal">
+        <div class="method-card-num">03 / HARDWARE</div>
+        <h3>Dual GPU + Mixed FP16</h3>
+        <p>MirroredStrategy trên 2× NVIDIA Tesla T4. Mixed Precision FP16 giảm VRAM, tăng throughput. Global Batch Size 64 = 32/GPU.</p>
+        <span class="method-tag">T4 × 2 | FP16</span>
+      </div>
+      <div class="method-card reveal">
+        <div class="method-card-num">04 / EVALUATION</div>
+        <h3>TTA + Per-class Threshold</h3>
+        <p>Test Time Augmentation giảm variance. Tối ưu ngưỡng riêng từng bệnh qua Youden Index. Hạ thêm 15% ngưỡng cho 4 bệnh hiếm để giảm false negative.</p>
+        <span class="method-tag">Youden Index | −15% Rare</span>
+      </div>
+      <div class="method-card reveal">
+        <div class="method-card-num">05 / SAMPLING</div>
+        <h3>Class Weights Động</h3>
+        <p>Tính trọng số dựa trên phân phối nhãn thực tế trong Train Set. Normalize về [1.0×, 5.0×] — kết hợp Focal Loss tạo áp lực học kép trên minority classes.</p>
+        <span class="method-tag">Range [1.0×, 5.0×]</span>
+      </div>
+      <div class="method-card reveal">
+        <div class="method-card-num">06 / XAI</div>
+        <h3>Gradient Saliency Map</h3>
+        <p>Trực quan hóa vùng pixel ảnh hưởng đến dự đoán. Gradient tập trung đúng vùng bất thường lâm sàng — Effusion ở góc sườn hoành, Pneumothorax ở ranh giới màng phổi.</p>
+        <span class="method-tag">Percentile Normalization</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="results-wrap">
+    <div class="results-header-row reveal">
+      <div>
+        <div class="section-label">Kết quả đánh giá</div>
+        <h2 class="section-title">Mean AUC 0.7802 trên Test Set</h2>
+        <p class="section-body">Vượt Wang et al. (2017) trên 11/14 bệnh, khoảng cách với CheXNet chỉ còn −0.061.</p>
+      </div>
+      <div class="compare-strip reveal">
+        <div class="compare-row">
+          <span class="compare-label">Wang et al. (2017)</span>
+          <div class="compare-track"><div class="compare-fill fill-wang" style="width:73.74%"></div></div>
+          <span class="compare-val">0.737</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-label" style="color:var(--cyan)">CNN (Dự án) ✦</span>
+          <div class="compare-track"><div class="compare-fill fill-cnn" style="width:78.02%"></div></div>
+          <span class="compare-val" style="color:var(--cyan)">0.780</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-label">CheXNet (2017)</span>
+          <div class="compare-track"><div class="compare-fill fill-chex" style="width:84.12%"></div></div>
+          <span class="compare-val">0.841</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="diseases-table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Bệnh lý</th>
+            <th>Tên tiếng Việt</th>
+            <th>CNN (Dự án)</th>
+            <th>Wang et al.</th>
+            <th>CheXNet</th>
+            <th>vs Wang</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>01</td><td class="label-cell">Atelectasis</td><td>Xẹp phổi</td><td class="auc-cell auc-mid">0.728</td><td class="auc-cell">0.700</td><td class="auc-cell">0.809</td><td><span class="badge-plus">+0.028</span></td></tr>
+          <tr><td>02</td><td class="label-cell">Cardiomegaly</td><td>Tim to</td><td class="auc-cell auc-mid">0.736</td><td class="auc-cell">0.810</td><td class="auc-cell">0.925</td><td><span class="badge-minus">−0.074</span></td></tr>
+          <tr><td>03</td><td class="label-cell">Effusion</td><td>Tràn dịch</td><td class="auc-cell auc-high">0.852</td><td class="auc-cell">0.759</td><td class="auc-cell">0.864</td><td><span class="badge-plus">+0.094</span></td></tr>
+          <tr><td>04</td><td class="label-cell">Infiltration</td><td>Thâm nhiễm</td><td class="auc-cell auc-mid">0.668</td><td class="auc-cell">0.661</td><td class="auc-cell">0.735</td><td><span class="badge-plus">+0.007</span></td></tr>
+          <tr><td>05</td><td class="label-cell">Mass</td><td>Khối u</td><td class="auc-cell auc-mid">0.759</td><td class="auc-cell">0.693</td><td class="auc-cell">0.868</td><td><span class="badge-plus">+0.066</span></td></tr>
+          <tr><td>06</td><td class="label-cell">Nodule</td><td>Nốt phổi</td><td class="auc-cell auc-mid">0.692</td><td class="auc-cell">0.669</td><td class="auc-cell">0.780</td><td><span class="badge-plus">+0.023</span></td></tr>
+          <tr><td>07</td><td class="label-cell">Pneumonia</td><td>Viêm phổi</td><td class="auc-cell auc-mid">0.727</td><td class="auc-cell">0.658</td><td class="auc-cell">0.768</td><td><span class="badge-plus">+0.069</span></td></tr>
+          <tr><td>08</td><td class="label-cell">Pneumothorax</td><td>Tràn khí</td><td class="auc-cell auc-high">0.842</td><td class="auc-cell">0.799</td><td class="auc-cell">0.889</td><td><span class="badge-plus">+0.043</span></td></tr>
+          <tr><td>09</td><td class="label-cell">Consolidation</td><td>Đông đặc</td><td class="auc-cell auc-mid">0.784</td><td class="auc-cell">0.703</td><td class="auc-cell">0.803</td><td><span class="badge-plus">+0.081</span></td></tr>
+          <tr><td>10</td><td class="label-cell">Edema</td><td>Phù phổi</td><td class="auc-cell auc-high">0.870</td><td class="auc-cell">0.805</td><td class="auc-cell">0.888</td><td><span class="badge-plus">+0.065</span></td></tr>
+          <tr><td>11</td><td class="label-cell">Emphysema</td><td>Khí phế thũng</td><td class="auc-cell auc-high">0.876</td><td class="auc-cell">0.833</td><td class="auc-cell">0.937</td><td><span class="badge-plus">+0.043</span></td></tr>
+          <tr><td>12</td><td class="label-cell">Fibrosis</td><td>Xơ phổi</td><td class="auc-cell auc-mid">0.715</td><td class="auc-cell">0.786</td><td class="auc-cell">0.805</td><td><span class="badge-minus">−0.071</span></td></tr>
+          <tr><td>13</td><td class="label-cell">Pleural Thick.</td><td>Dày màng phổi</td><td class="auc-cell auc-mid">0.752</td><td class="auc-cell">0.684</td><td class="auc-cell">0.806</td><td><span class="badge-plus">+0.069</span></td></tr>
+          <tr><td>14</td><td class="label-cell">Hernia</td><td>Thoát vị hoành</td><td class="auc-cell auc-high">0.934 <span class="badge-best">★ SOTA</span></td><td class="auc-cell">0.872</td><td class="auc-cell">0.916</td><td><span class="badge-plus">+0.062</span></td></tr>
+          <tr class="row-mean"><td>—</td><td colspan="2"><strong>MEAN AUC</strong></td><td class="auc-cell"><strong>0.780</strong></td><td class="auc-cell">0.737</td><td class="auc-cell">0.841</td><td><span class="badge-plus">+0.043</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="arch" class="arch-section">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <div class="section-label">Kiến trúc mô hình</div>
+      <h2 class="section-title">Custom CNN — 4 Block Double-Conv</h2>
+      <p class="section-body">~2.88M tham số. Thiết kế theo nguyên tắc "Sâu dần — Rộng dần — Double Conv". Không dùng pre-trained weights.</p>
+    </div>
+
+    <div class="arch-grid">
+      <div class="arch-diagram reveal">
+        <div style="color:var(--teal); margin-bottom:12px; font-size:0.65rem; letter-spacing:0.1em">// MODEL ARCHITECTURE</div>
+        <div>Input: <span style="color:var(--cyan)">(B, 384, 384, 3)</span></div>
+        <div class="connector">│</div>
+        <div class="block">
+          <span class="bname">BLOCK 1</span> — Low-level Features<br/>
+          <span class="bfilter">Conv2D(32)</span> × 2 → BN → ReLU → Pool → Drop(0.25)<br/>
+          <span style="color:var(--muted); font-size:0.62rem">→ 192×192</span>
+        </div>
+        <div class="connector">│</div>
+        <div class="block">
+          <span class="bname">BLOCK 2</span> — Texture / Pattern<br/>
+          <span class="bfilter">Conv2D(64)</span> × 2 → BN → ReLU → Pool → Drop(0.25)<br/>
+          <span style="color:var(--muted); font-size:0.62rem">→ 96×96</span>
+        </div>
+        <div class="connector">│</div>
+        <div class="block">
+          <span class="bname">BLOCK 3</span> — Semantic Features<br/>
+          <span class="bfilter">Conv2D(128)</span> × 2 → BN → ReLU → Pool → Drop(0.25)<br/>
+          <span style="color:var(--muted); font-size:0.62rem">→ 48×48</span>
+        </div>
+        <div class="connector">│</div>
+        <div class="block">
+          <span class="bname">BLOCK 4</span> — High-level Pathology<br/>
+          <span class="bfilter">Conv2D(256)</span> × 2 → BN → ReLU → Pool → Drop(0.25)<br/>
+          <span style="color:var(--muted); font-size:0.62rem">→ 24×24</span>
+        </div>
+        <div class="connector">│</div>
+        <div class="block head-block">
+          <span class="bname" style="color:var(--accent)">HEAD</span> — Classifier<br/>
+          GlobalAvgPool2D → Dense(512) → BN → Drop(0.5)<br/>
+          → <span class="bfilter" style="color:var(--accent)">Dense(15, sigmoid)</span>
+        </div>
+        <div class="connector">│</div>
+        <div>Output: <span style="color:var(--accent)">(B, 15)</span> — xác suất độc lập</div>
+      </div>
+
+      <div class="stages-timeline reveal">
+        <div class="stage-item">
+          <div class="stage-line"><div class="stage-dot"></div><div class="stage-track"></div></div>
+          <div class="stage-content">
+            <div class="stage-num">Stage 01 — Warm-up</div>
+            <h4>Block 1 + Head</h4>
+            <p>Chỉ mở Block 1 và Classifier Head. Block 2–4 bị freeze. Học đặc trưng thô: cạnh, vân, ranh giới mô.</p>
+            <span class="stage-pill">224×224 · LR=1e-4 · ~2h</span>
+          </div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-line"><div class="stage-dot"></div><div class="stage-track"></div></div>
+          <div class="stage-content">
+            <div class="stage-num">Stage 02 — Expand</div>
+            <h4>Block 1–2 + Head</h4>
+            <p>Mở thêm Block 2. Block 3–4 còn freeze. Học texture và pattern tổn thương, kết hợp đặc trưng thô từ Stage 1.</p>
+            <span class="stage-pill">224×224 · LR=1e-4 · ~2h</span>
+          </div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-line"><div class="stage-dot"></div><div class="stage-track"></div></div>
+          <div class="stage-content">
+            <div class="stage-num">Stage 03 — Deepen</div>
+            <h4>Block 1–3 + Head</h4>
+            <p>Mở Block 3. Chỉ Block 4 còn freeze. Học đặc trưng ngữ nghĩa cao — hình thái và phân bố bệnh lý.</p>
+            <span class="stage-pill">224×224 · LR=1e-4 · ~2h</span>
+          </div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-line"><div class="stage-dot" style="border-color:var(--cyan)"></div><div class="stage-track" style="background:linear-gradient(to bottom, var(--cyan), transparent)"></div></div>
+          <div class="stage-content" style="border-color:rgba(0,200,210,0.25)">
+            <div class="stage-num" style="color:var(--cyan)">Stage 04 — Full Resolution ★</div>
+            <h4 style="color:var(--cyan)">Tất cả Block + Head</h4>
+            <p>Unfreeze tất cả. Nâng từ 224 lên <strong style="color:var(--cyan)">384×384</strong> — cung cấp pixel-level detail để phân biệt Nodule vs Mass, đặc trưng mịn của Fibrosis.</p>
+            <span class="stage-pill" style="border-color:rgba(0,200,210,0.4); color:var(--cyan)">384×384 · best_stage4.keras (110 MB)</span>
+          </div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-line"><div class="stage-dot" style="border-color:var(--accent)"></div></div>
+          <div class="stage-content" style="border-color:rgba(0,229,192,0.2)">
+            <div class="stage-num" style="color:var(--accent)">Warm Restart</div>
+            <h4>Cosine Annealing</h4>
+            <p>Thoát cực tiểu cục bộ, khám phá không gian tham số rộng hơn. ReduceLROnPlateau + EarlyStopping.</p>
+            <span class="stage-pill" style="border-color:rgba(0,229,192,0.3); color:var(--accent)">~30 phút</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="section-label" style="justify-content:center; margin-bottom:1.5rem">Trải nghiệm ngay</div>
+  <h2>Tải ảnh X-quang<br/>và nhận kết quả AI</h2>
+  <p>Demo trực tiếp trên Hugging Face Spaces — upload ảnh X-quang lồng ngực và xem mô hình chẩn đoán 14 bệnh lý kèm xác suất từng bệnh.</p>
+  <a class="btn-demo" href="https://huggingface.co/spaces/chuandoanlongngucCNN/AIchuandoanlongngucCNN" target="_blank" style="font-size:1.05rem; padding:18px 44px; position:relative;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+    </svg>
+    Mở Demo Trực tiếp
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+  </a>
+
+  <div style="margin-top:3rem; display:flex; gap:2rem; justify-content:center; flex-wrap:wrap; position:relative;">
+    <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+      <span style="color:var(--cyan)">✓</span> Miễn phí · Không cần đăng ký
+    </div>
+    <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+      <span style="color:var(--cyan)">✓</span> Model 110 MB · Inference nhanh
+    </div>
+    <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+      <span style="color:var(--cyan)">✓</span> 14 bệnh lý + Gradient Saliency
+    </div>
+  </div>
+
+  <p style="margin-top:2.5rem; font-size:0.72rem; color:var(--muted); max-width:500px; position:relative;">
+    ⚠️ Kết quả AI chỉ mang tính chất tham khảo, không thay thế chẩn đoán lâm sàng của bác sĩ.
+  </p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    © 2024 · AI Chẩn Đoán Lồng Ngực · Custom CNN · NIH ChestX-ray14
+  </div>
+  <div class="footer-badges">
+    <span class="fbadge">TensorFlow 2.19</span>
+    <span class="fbadge">Python 3.12</span>
+    <span class="fbadge">Mean AUC 0.7802</span>
+    <span class="fbadge">T4 × 2 GPU</span>
+    <span class="fbadge">112K Images</span>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Animate bars on scroll
+  const bars = document.querySelectorAll('.disease-bar');
+  const barObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.style.animationPlayState = 'running';
+    });
+  }, { threshold: 0.2 });
+  bars.forEach(b => { b.style.animationPlayState = 'paused'; barObs.observe(b); });
+</script>
+</body>
+</html>
